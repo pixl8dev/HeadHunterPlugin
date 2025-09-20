@@ -382,7 +382,7 @@ public final class HeadHunterPlugin extends JavaPlugin implements Listener {
         String yamlMobName = "chance_percent." + mobName.toLowerCase();
         double dropRate = chanceConfig().getDouble(yamlMobName, defaultChanceConfig().getDouble(yamlMobName));
         if (headHunterConfig().looting_matters()) {
-            int looting_level = killer.getInventory().getItemInMainHand().getEnchantmentLevel(Enchantment.LOOTING);
+            int looting_level = killer.getInventory().getItemInMainHand().getEnchantmentLevel(Enchantment.LOOT_BONUS_MOBS);
             dropRate = dropRate * (1 + (looting_level * headHunterConfig().looting_multiplier()));
         }
         return dropRate;
@@ -433,17 +433,15 @@ public final class HeadHunterPlugin extends JavaPlugin implements Listener {
             case "FROG":
                 return "FROG." + ((Frog) event.getEntity()).getVariant();
             case "WOLF":
-                variant = ((Wolf) event.getEntity()).getVariant().getKeyOrThrow();
-                return "WOLF." + variant.getKey().replace("minecraft:", "").toUpperCase();
+                // Variant handling for Wolf, Cow, Pig, and Chicken is not directly available in this version
+                // Using default types for these mobs
+                return "WOLF.DEFAULT";
             case "COW":
-                variant = ((Cow) event.getEntity()).getVariant().getKeyOrThrow();
-                return "COW." + variant.getKey().replace("minecraft:", "").toUpperCase();
+                return "COW.DEFAULT";
             case "PIG":
-                variant = ((Pig) event.getEntity()).getVariant().getKeyOrThrow();
-                return "PIG." + variant.getKey().replace("minecraft:", "").toUpperCase();
+                return "PIG.DEFAULT";
             case "CHICKEN":
-                variant = ((Chicken) event.getEntity()).getVariant().getKeyOrThrow();
-                return "CHICKEN." + variant.getKey().replace("minecraft:", "").toUpperCase();
+                return "CHICKEN.DEFAULT";
             default:
                 return name;
         }
