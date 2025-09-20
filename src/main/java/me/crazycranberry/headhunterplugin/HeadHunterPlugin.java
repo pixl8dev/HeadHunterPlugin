@@ -158,13 +158,21 @@ public final class HeadHunterPlugin extends JavaPlugin implements Listener {
             return;
         }
 
+        // Only process if this is a head placed by our plugin
         String name = meta.getPersistentDataContainer().get(NAME_KEY, PersistentDataType.STRING);
+        if (name == null) {
+            return; // Not one of our heads
+        }
+        
         List<String> lore = new ArrayList<>();
         Optional.ofNullable(meta.getPersistentDataContainer().get(LORE_KEY_1, PersistentDataType.STRING)).ifPresent(lore::add);
         Optional.ofNullable(meta.getPersistentDataContainer().get(LORE_KEY_2, PersistentDataType.STRING)).ifPresent(lore::add);
+        
         Block block = event.getBlockPlaced();
         TileState skullState = (TileState) block.getState();
         PersistentDataContainer skullPDC = skullState.getPersistentDataContainer();
+        
+        // Store the head's data in the block
         skullPDC.set(NAME_KEY, PersistentDataType.STRING, name);
         if (!lore.isEmpty()) {
             skullPDC.set(LORE_KEY_1, PersistentDataType.STRING, lore.get(0));
