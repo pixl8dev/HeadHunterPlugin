@@ -60,6 +60,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.function.BiConsumer;
+import java.util.stream.Collectors;
 import java.util.logging.Logger;
 
 import static me.crazycranberry.headhunterplugin.util.HeadHunterConfig.updateOutOfDateConfig;
@@ -384,15 +385,13 @@ public final class HeadHunterPlugin extends JavaPlugin implements Listener {
             case "FROG":
                 return "FROG." + ((Frog) event.getEntity()).getVariant();
             case "WOLF":
-                // Variant handling for Wolf, Cow, Pig, and Chicken is not directly available in this version
-                // Using default types for these mobs
-                return "WOLF.DEFAULT";
+                return "WOLF";
             case "COW":
-                return "COW.DEFAULT";
+                return "COW_TEMPERATE";
             case "PIG":
-                return "PIG.DEFAULT";
+                return "PIG_TEMPERATE";
             case "CHICKEN":
-                return "CHICKEN.DEFAULT";
+                return "CHICKEN_TEMPERATE";
             default:
                 return name;
         }
@@ -401,7 +400,8 @@ public final class HeadHunterPlugin extends JavaPlugin implements Listener {
     public ItemStack makeSkull(String headName, Player killer) {
         ItemStack item = new ItemStack(Material.PLAYER_HEAD);
         SkullMeta meta = (SkullMeta) item.getItemMeta();
-        String textureCode =  MobHeads.valueOf(headName.replace(".", "_")).getTexture();
+        MobHeads mobHead = MobHeads.valueOf(headName.replace(".", "_"));
+        String textureCode = mobHead.getTexture();
         if (textureCode == null) {
             return item;
         }
@@ -428,7 +428,8 @@ public final class HeadHunterPlugin extends JavaPlugin implements Listener {
             return item;
         }
         
-        String translatedName = translateMob(headName);
+        // Translate using the enum key (e.g., "cow_temperate") to support nested translation keys
+        String translatedName = translateMob(mobHead.name().toLowerCase());
         meta.setDisplayName(translatedName);
         
         if (!headHunterConfig().shouldFixClaimPlugins()) {
@@ -466,30 +467,41 @@ public final class HeadHunterPlugin extends JavaPlugin implements Listener {
     }
 
     public String translateMob(String mobNameEnglish) {
-        String name = mobNameEnglish.toLowerCase();
-        if (!mobNameTranslationConfig().isString(name)) {
-            //maybe it's a mob with a type... Let's try finding its prefix mob type
-            String[] nameParts = name.split(" ");
-            if (nameParts.length > 1) {
-                name = nameParts[0];
+        // Normalize the input into a consistent key form: lower-case with underscores
+        String key = mobNameEnglish.toLowerCase().replace(' ', '_');
+
+        String translatedName = null;
+
+        // 1) Try direct string key (e.g., "cow_temperate")
+        if (mobNameTranslationConfig().isString(key)) {
+            translatedName = mobNameTranslationConfig().getString(key);
+        }
+
+        // 2) Try nested path (e.g., cow.temperate) if not found directly
+        if (translatedName == null && key.contains("_")) {
+            String[] parts = key.split("_", 2);
+            String nestedPath = parts[0] + "." + parts[1];
+            if (mobNameTranslationConfig().isString(nestedPath)) {
+                translatedName = mobNameTranslationConfig().getString(nestedPath);
             }
         }
-        String translatedName = mobNameTranslationConfig().getString(name, mobNameEnglish);
+
+        // 3) Fallback to a humanized version of the key
         if (translatedName == null) {
-            translatedName = mobNameEnglish.replaceAll("_", " ").toLowerCase();
+            translatedName = key.replace('_', ' ');
         } else {
-            translatedName = translatedName.replaceAll("\\.", " ");
+            // Replace underscores and dots in translation values with spaces
+            translatedName = translatedName.replace('_', ' ').replace('.', ' ');
         }
-        
-        // Apply capitalization if enabled in config
+
+        // Apply capitalization if enabled in config (capitalize first letter only to preserve styles)
         if (headHunterConfig != null && headHunterConfig.shouldCapitalizeMobNames()) {
             if (!translatedName.isEmpty()) {
-                // Capitalize first letter and keep the rest as is
-                translatedName = translatedName.substring(0, 1).toUpperCase() + 
-                               (translatedName.length() > 1 ? translatedName.substring(1) : "");
+                translatedName = translatedName.substring(0, 1).toUpperCase() +
+                        (translatedName.length() > 1 ? translatedName.substring(1) : "");
             }
         }
-        
+
         return translatedName;
     }
 
