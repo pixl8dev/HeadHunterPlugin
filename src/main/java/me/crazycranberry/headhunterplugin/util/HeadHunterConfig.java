@@ -14,10 +14,18 @@ import static me.crazycranberry.headhunterplugin.HeadHunterPlugin.logger;
 
 public class HeadHunterConfig {
     private YamlConfiguration originalConfig;
+    // General settings
     private boolean display_score_in_player_list = true;
+    private boolean log_rolls = true;
+    private boolean broadcast_head_drops = true;
+    private boolean show_kill_count = true;
+    private boolean show_head_count = true;
+    private boolean show_head_collection_summary = true;
+    private String broadcast_permission = "";
+    
+    // Looting settings
     private boolean looting_enchantment_affects_drop_rate = false;
     private double looting_enchantment_drop_rate_multiplier = 0.1;
-    private boolean log_rolls = true;
     private String head_drop;
     private String kill_count;
     private String head_count;
@@ -61,10 +69,36 @@ public class HeadHunterConfig {
     }
 
     public void loadConfig(YamlConfiguration config) {
-        display_score_in_player_list = config.getBoolean("display_score_in_player_list", originalConfig.getBoolean("display_score_in_player_list"));
-        looting_enchantment_affects_drop_rate = config.getBoolean("looting_enchantment.affects_drop_rate",  originalConfig.getBoolean("looting_enchantment_affects_drop_rate"));
-        looting_enchantment_drop_rate_multiplier = config.getDouble("looting_enchantment.drop_rate_multiplier",  originalConfig.getDouble("looting_enchantment.drop_rate_multiplier"));
-        log_rolls = config.getBoolean("log_rolls", originalConfig.getBoolean("log_rolls"));
+        // General settings
+        display_score_in_player_list = config.getBoolean("general.display_score_in_player_list", 
+            config.getBoolean("display_score_in_player_list", originalConfig.getBoolean("general.display_score_in_player_list", true)));
+            
+        log_rolls = config.getBoolean("general.log_rolls", 
+            config.getBoolean("log_rolls", originalConfig.getBoolean("general.log_rolls", true)));
+            
+        broadcast_head_drops = config.getBoolean("general.broadcast_head_drops", 
+            originalConfig.getBoolean("general.broadcast_head_drops", true));
+            
+        show_kill_count = config.getBoolean("general.show_kill_count", 
+            originalConfig.getBoolean("general.show_kill_count", true));
+            
+        show_head_count = config.getBoolean("general.show_head_count", 
+            originalConfig.getBoolean("general.show_head_count", true));
+            
+        show_head_collection_summary = config.getBoolean("general.show_head_collection_summary", 
+            originalConfig.getBoolean("general.show_head_collection_summary", true));
+            
+        broadcast_permission = config.getString("general.broadcast_permission", 
+            originalConfig.getString("general.broadcast_permission", ""));
+        
+        // Looting settings
+        looting_enchantment_affects_drop_rate = config.getBoolean("looting_enchantment.affects_drop_rate", 
+            config.getBoolean("looting_enchantment_affects_drop_rate", 
+            originalConfig.getBoolean("looting_enchantment.affects_drop_rate", false)));
+            
+        looting_enchantment_drop_rate_multiplier = config.getDouble("looting_enchantment.drop_rate_multiplier", 
+            config.getDouble("looting_enchantment.drop_rate_multiplier", 
+            originalConfig.getDouble("looting_enchantment.drop_rate_multiplier", 0.1)));
         String head_drop_maybe = config.getString("messages.head_drop", originalConfig.getString("messages.head_drop"));
         if (head_drop_maybe.contains("{PLAYER_NAME}") && head_drop_maybe.contains("{MOB_NAME}")) {
             head_drop = injectColor(head_drop_maybe);
@@ -95,9 +129,36 @@ public class HeadHunterConfig {
         head_secondary_statement = injectColor(config.getString("messages.head_lore.secondary_statement", originalConfig.getString("messages.head_lore.secondary_statement")));
     }
 
+    // General settings getters
     public boolean display_score() {
         return display_score_in_player_list;
     }
+    
+    public boolean shouldLogRolls() {
+        return log_rolls;
+    }
+    
+    public boolean shouldBroadcastHeadDrops() {
+        return broadcast_head_drops;
+    }
+    
+    public boolean shouldShowKillCount() {
+        return show_kill_count;
+    }
+    
+    public boolean shouldShowHeadCount() {
+        return show_head_count;
+    }
+    
+    public boolean shouldShowHeadCollectionSummary() {
+        return show_head_collection_summary;
+    }
+    
+    public String getBroadcastPermission() {
+        return broadcast_permission;
+    }
+    
+    // Looting settings getters
 
     public boolean looting_matters() {
         return looting_enchantment_affects_drop_rate;

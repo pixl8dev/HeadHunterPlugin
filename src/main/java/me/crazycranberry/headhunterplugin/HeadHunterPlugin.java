@@ -112,19 +112,78 @@ public final class HeadHunterPlugin extends JavaPlugin implements Listener {
     public void onEntityDeathEvent(EntityDeathEvent event) {
         LivingEntity entity = event.getEntity();
         if (entity.getKiller() != null) {
+            Player killer = entity.getKiller();
             String name = getTrueVictimName(event);
+            String mobName = translateMob(name);
             double roll = Math.random();
-            double dropRate = getDropRate(name, entity.getKiller());
-            if (headHunterConfig().log_rolls()) {
-                logger.info(String.format("%s killed %s and rolled %s for a %s drop rate.", entity.getKiller().getName(), translateMob(name), roll, dropRate));
+            double dropRate = getDropRate(name, killer);
+            
+            // Log the roll if enabled
+            if (headHunterConfig().shouldLogRolls()) {
+                logger.info(String.format("%s killed %s and rolled %s for a %s drop rate.", 
+                    killer.getName(), mobName, roll, dropRate));
             }
+            
+            // Handle head drop
             if (roll < dropRate) {
-                entity.getWorld().dropItem(entity.getLocation(), makeSkull(name, entity.getKiller()));
-                getServer().broadcastMessage(headHunterConfig().head_drop_message(entity.getKiller().getName(), translateMob(name) + ChatColor.RESET));
-                logKillOrDrop(entity.getKiller(), name.replace(".", "_"), hcConfig());
-                updateScore(entity.getKiller(), hcConfig());
+                // Drop the head
+                entity.getWorld().dropItem(entity.getLocation(), makeSkull(name, killer));
+                
+                // Broadcast the head drop if enabled
+                if (headHunterConfig().shouldBroadcastHeadDrops()) {
+                    String broadcastMessage = headHunterConfig().head_drop_message(killer.getName(), mobName + ChatColor.RESET);
+                    String permission = headHunterConfig().getBroadcastPermission();
+                    
+                    if (permission == null || permission.isEmpty()) {
+                        // Broadcast to everyone if no permission is set
+                        getServer().broadcastMessage(broadcastMessage);
+                    } else {
+                        // Only broadcast to players with the required permission
+                        for (Player player : getServer().getOnlinePlayers()) {
+                            if (player.hasPermission(permission)) {
+                                player.sendMessage(broadcastMessage);
+                            }
+                        }
+                        // Also send to console
+                        logger.info(ChatColor.stripColor(broadcastMessage));
+                    }
+                }
+                
+                // Log the head drop
+                logKillOrDrop(killer, name.replace(".", "_"), hcConfig());
+                
+                // Update the scoreboard if enabled
+                if (headHunterConfig().display_score()) {
+                    updateScore(killer, hcConfig());
+                }
+                
+                // Show head collection summary if enabled
+                if (headHunterConfig().shouldShowHeadCollectionSummary()) {
+                    // This would be a good place to add periodic head collection summary
+                    // For now, we'll just show the current head count for this mob
+                    if (headHunterConfig().shouldShowHeadCount()) {
+                        int headCount = hcConfig().getInt(killer.getUniqueId() + "." + name.replace(".", "_"), 0);
+                        killer.sendMessage(headHunterConfig().head_count_message(
+                            killer.getName(), 
+                            String.valueOf(headCount), 
+                            mobName + ChatColor.RESET
+                        ));
+                    }
+                }
             }
-            logKillOrDrop(entity.getKiller(), name.replace(".", "_"), kcConfig());
+            
+            // Log the kill for kill count if enabled
+            if (headHunterConfig().shouldShowKillCount()) {
+                logKillOrDrop(killer, name.replace(".", "_"), kcConfig());
+                
+                // Show kill count message
+                int killCount = kcConfig().getInt(killer.getUniqueId() + "." + name.replace(".", "_"), 0);
+                killer.sendMessage(headHunterConfig().kill_count_message(
+                    killer.getName(), 
+                    String.valueOf(killCount), 
+                    mobName + ChatColor.RESET
+                ));
+            }
         }
     }
     @EventHandler
@@ -193,8 +252,12 @@ public final class HeadHunterPlugin extends JavaPlugin implements Listener {
     }
 
     private void registerScoreboard() {
-        if (headHunterConfig().display_score()) {
-            scoreboardWrapper = new ScoreboardWrapper("Unique Head Count");
+        // Always initialize the scoreboard, but only show it if enabled in config
+        scoreboardWrapper = new ScoreboardWrapper("Unique Head Count");
+        
+        // Hide the scoreboard if it's disabled in config
+        if (!headHunterConfig().display_score()) {
+            hideScoreboard();
         }
     }
 

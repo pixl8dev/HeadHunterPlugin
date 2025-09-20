@@ -1,10 +1,28 @@
-display_score_in_player_list: true
+# General plugin settings
+general:
+  # Whether to display the head count in the player list (scoreboard)
+  display_score_in_player_list: false
+  # Whether to log drop chance rolls to console (useful for debugging)
+  log_rolls: false
+  # Whether to broadcast when a player gets a head
+  broadcast_head_drops: false
+  # Whether to show kill count messages in chat
+  show_kill_count: false
+  # Whether to show head count messages in chat
+  show_head_count: false
+  # Whether to show periodic head collection summary in chat
+  show_head_collection_summary: false
+  # Minimum permission level required to receive head drop broadcasts (empty for all players)
+  # Example: 'headhunter.notify' - only players with this permission will see broadcasts
+  broadcast_permission: ''
+
+# Looting enchantment settings
 looting_enchantment:
+  # Whether looting affects the drop rate of heads
   affects_drop_rate: false
   # Multiplies the drop rate like so: new_drop_rate = drop_rate * (1 + (looting_level * drop_rate_multiplier))
   # So if drop_rate_multiplier=0.1 and looting_level=3, then a drop rate of 0.002 becomes 0.002 * (1 + (0.3)) = 0.0026
   drop_rate_multiplier: 0.05
-log_rolls: true
 messages:
   # You may update/translate/colorize the messages that get broadcasted to players here. Make sure to include {PLAYER_NAME},
   # {MOB_NAME}, or any other non-color variables inside curly braces; otherwise, the default will be used. Customize the color
