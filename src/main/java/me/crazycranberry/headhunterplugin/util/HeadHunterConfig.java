@@ -92,28 +92,32 @@ public class HeadHunterConfig {
             config.getDouble("looting_enchantment.drop_rate_multiplier", 
             originalConfig.getDouble("looting_enchantment.drop_rate_multiplier", 0.1)));
         String head_drop_maybe = config.getString("messages.head_drop", originalConfig.getString("messages.head_drop"));
-        if (head_drop_maybe.contains("{PLAYER_NAME}") && head_drop_maybe.contains("{MOB_NAME}")) {
+        if (head_drop_maybe != null && head_drop_maybe.contains("{PLAYER_NAME}") && head_drop_maybe.contains("{MOB_NAME}")) {
             head_drop = injectColor(head_drop_maybe);
         } else {
-            head_drop = injectColor(originalConfig.getString("messages.head_drop"));
+            String defaultHeadDrop = originalConfig.getString("messages.head_drop", "{PLAYER_NAME} got a {MOB_NAME} head!");
+            head_drop = injectColor(defaultHeadDrop);
         }
         String kill_count_maybe = config.getString("messages.kill_count", originalConfig.getString("messages.kill_count"));
-        if (kill_count_maybe.contains("{PLAYER_NAME}") && kill_count_maybe.contains("{NUMBER}") && kill_count_maybe.contains("{MOB_NAME}")) {
+        if (kill_count_maybe != null && kill_count_maybe.contains("{PLAYER_NAME}") && kill_count_maybe.contains("{NUMBER}") && kill_count_maybe.contains("{MOB_NAME}")) {
             kill_count = injectColor(kill_count_maybe);
         } else {
-            kill_count = injectColor(originalConfig.getString("messages.kill_count"));
+            String defaultKillCount = originalConfig.getString("messages.kill_count", "{PLAYER_NAME} has killed {NUMBER} {MOB_NAME}s");
+            kill_count = injectColor(defaultKillCount);
         }
         String head_count_maybe = config.getString("messages.head_count", originalConfig.getString("messages.head_count"));
-        if (head_count_maybe.contains("{PLAYER_NAME}") && head_count_maybe.contains("{NUMBER}") && head_count_maybe.contains("{MOB_NAME}")) {
+        if (head_count_maybe != null && head_count_maybe.contains("{PLAYER_NAME}") && head_count_maybe.contains("{NUMBER}") && head_count_maybe.contains("{MOB_NAME}")) {
             head_count = injectColor(head_count_maybe);
         } else {
-            head_count = injectColor(originalConfig.getString("messages.head_count"));
+            String defaultHeadCount = originalConfig.getString("messages.head_count", "{PLAYER_NAME} has collected {NUMBER} {MOB_NAME} heads");
+            head_count = injectColor(defaultHeadCount);
         }
         String heads_maybe = config.getString("messages.heads", originalConfig.getString("messages.heads"));
-        if (heads_maybe.contains("{PLAYER_NAME}") && heads_maybe.contains("{NUMBER}") && heads_maybe.contains("{TOTAL}") && heads_maybe.contains("{HEAD_LIST}")) {
+        if (heads_maybe != null && heads_maybe.contains("{PLAYER_NAME}") && heads_maybe.contains("{NUMBER}") && heads_maybe.contains("{TOTAL}") && heads_maybe.contains("{HEAD_LIST}")) {
             heads = injectColor(heads_maybe);
         } else {
-            heads = injectColor(originalConfig.getString("messages.heads"));
+            String defaultHeads = originalConfig.getString("messages.heads", "{PLAYER_NAME} has collected {NUMBER} out of {TOTAL} heads:\n{HEAD_LIST}");
+            heads = injectColor(defaultHeads);
         }
         missing_mob_name = injectColor(config.getString("messages.command_errors.missing_mob_name", originalConfig.getString("messages.command_errors.missing_mob_name")));
         invalid_mob_name = injectColor(config.getString("messages.command_errors.invalid_mob_name", originalConfig.getString("messages.command_errors.invalid_mob_name")));
