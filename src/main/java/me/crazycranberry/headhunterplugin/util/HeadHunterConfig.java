@@ -15,7 +15,6 @@ import static me.crazycranberry.headhunterplugin.HeadHunterPlugin.logger;
 public class HeadHunterConfig {
     private YamlConfiguration originalConfig;
     // General settings
-    private boolean display_score_in_player_list = true;
     private boolean log_rolls = true;
     private boolean broadcast_head_drops = true;
     private boolean show_kill_count = true;
@@ -72,9 +71,6 @@ public class HeadHunterConfig {
 
     public void loadConfig(YamlConfiguration config) {
         // General settings
-        display_score_in_player_list = config.getBoolean("general.display_score_in_player_list", 
-            config.getBoolean("display_score_in_player_list", originalConfig.getBoolean("general.display_score_in_player_list", true)));
-            
         log_rolls = config.getBoolean("general.log_rolls", 
             config.getBoolean("log_rolls", originalConfig.getBoolean("general.log_rolls", true)));
             
@@ -138,10 +134,6 @@ public class HeadHunterConfig {
     }
 
     // General settings getters
-    public boolean display_score() {
-        return display_score_in_player_list;
-    }
-    
     public boolean shouldLogRolls() {
         return log_rolls;
     }

@@ -3,7 +3,6 @@ package me.crazycranberry.headhunterplugin;
 import com.google.gson.JsonParser;
 import me.crazycranberry.headhunterplugin.util.HeadHunterConfig;
 import me.crazycranberry.headhunterplugin.util.MobHeads;
-import me.crazycranberry.headhunterplugin.util.ScoreboardWrapper;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
@@ -40,7 +39,6 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockDropItemEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.entity.EntityDeathEvent;
-import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
@@ -50,7 +48,6 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import org.bukkit.profile.PlayerProfile;
 import org.bukkit.profile.PlayerTextures;
-import org.bukkit.scoreboard.DisplaySlot;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
@@ -81,7 +78,6 @@ public final class HeadHunterPlugin extends JavaPlugin implements Listener {
     YamlConfiguration kcLogConfig;
     YamlConfiguration mobNameTranslationConfig;
     YamlConfiguration defaultMobNameTranslationConfig;
-    ScoreboardWrapper scoreboardWrapper;
     CommandManager commandManager;
 
     @Override
@@ -90,7 +86,6 @@ public final class HeadHunterPlugin extends JavaPlugin implements Listener {
         plugin = this;
         registerCommandManager();
         registerEvents();
-        registerScoreboard();
     }
 
     @Override
@@ -103,10 +98,6 @@ public final class HeadHunterPlugin extends JavaPlugin implements Listener {
         }
     }
 
-    @EventHandler
-    public void onPlayerJoin(PlayerJoinEvent event) {
-        displayScoreboard(event);
-    }
 
     @EventHandler
     public void onEntityDeathEvent(EntityDeathEvent event) {
@@ -151,11 +142,6 @@ public final class HeadHunterPlugin extends JavaPlugin implements Listener {
                 
                 // Log the head drop
                 logKillOrDrop(killer, name.replace(".", "_"), hcConfig());
-                
-                // Update the scoreboard if enabled
-                if (headHunterConfig().display_score()) {
-                    updateScore(killer, hcConfig());
-                }
                 
                 // Show head collection summary if enabled
                 if (headHunterConfig().shouldShowHeadCollectionSummary()) {
@@ -251,44 +237,6 @@ public final class HeadHunterPlugin extends JavaPlugin implements Listener {
         getServer().getPluginManager().registerEvents(this, this);
     }
 
-    private void registerScoreboard() {
-        // Always initialize the scoreboard, but only show it if enabled in config
-        scoreboardWrapper = new ScoreboardWrapper("Unique Head Count");
-        
-        // Hide the scoreboard if it's disabled in config
-        if (!headHunterConfig().display_score()) {
-            hideScoreboard();
-        }
-    }
-
-    private void displayScoreboard(PlayerJoinEvent event) {
-        if (headHunterConfig().display_score()) {
-            event.getPlayer().setScoreboard(scoreboardWrapper.getScoreboard());
-            scoreboardWrapper.updateScore(event.getPlayer(), hcConfig());
-        }
-    }
-
-    private void updateScore(Player p, YamlConfiguration hcConfig) {
-        if (headHunterConfig().display_score()) {
-            scoreboardWrapper.updateScore(p, hcConfig);
-        }
-    }
-
-    private void displayScoreboardForAll() {
-        registerScoreboard();
-        for (Player p : Bukkit.getServer().getOnlinePlayers()) {
-            p.setScoreboard(scoreboardWrapper.getScoreboard());
-            scoreboardWrapper.updateScore(p, hcConfig());
-        }
-    }
-
-    private void hideScoreboard() {
-        for (String entry : scoreboardWrapper.getScoreboard().getEntries()) {
-            scoreboardWrapper.getScoreboard().resetScores(entry);
-        }
-        scoreboardWrapper.getScoreboard().clearSlot(DisplaySlot.PLAYER_LIST);
-        scoreboardWrapper = null;
-    }
 
     private void registerCommandManager() {
         commandManager = new CommandManager(getServer(), chanceConfig(), kcConfig(), hcConfig(), headHunterConfig());
@@ -561,18 +509,11 @@ public final class HeadHunterPlugin extends JavaPlugin implements Listener {
     }
 
     public String refreshYmlConfigurations() {
-        boolean wasScoreboardDisplayed = headHunterConfig().display_score();
         try {
             chanceConfig = loadConfig("chance_config.yml");
             mobNameTranslationConfig = loadConfig("mob_name_translations.yml");
             headHunterConfig = new HeadHunterConfig(loadConfig("head_hunter_config.yml"));
             commandManager.reloadYmlConfigs(chanceConfig(), kcConfig(), hcConfig(), headHunterConfig());
-            if (wasScoreboardDisplayed && !headHunterConfig().display_score()) {
-                hideScoreboard();
-            }
-            if (!wasScoreboardDisplayed && headHunterConfig().display_score()) {
-                displayScoreboardForAll();
-            }
             return "Successfully loaded configs.";
         } catch (Exception e) {
             e.printStackTrace();

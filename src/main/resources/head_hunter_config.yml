@@ -1,7 +1,5 @@
 # General plugin settings
 general:
-  # Whether to display the head count in the player list (scoreboard)
-  display_score_in_player_list: false
   # Whether to log drop chance rolls to console (useful for debugging)
   log_rolls: false
   # Whether to broadcast when a player gets a head
