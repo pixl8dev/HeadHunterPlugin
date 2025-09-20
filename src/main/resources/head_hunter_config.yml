@@ -12,6 +12,11 @@ general:
   show_head_count: false
   # Whether to show periodic head collection summary in chat
   show_head_collection_summary: false
+  # Whether to capitalize mob names in item names (e.g., 'zombie' becomes 'Zombie', 'zombie villager' becomes 'Zombie villager')
+  capitalize_mob_names: true
+  # Whether to disable custom lore to fix compatibility with claim plugins
+  # When enabled, heads will appear as vanilla items without custom NBT data
+  fix_claim_plugins: false
   # Minimum permission level required to receive head drop broadcasts (empty for all players)
   # Example: 'headhunter.notify' - only players with this permission will see broadcasts
   broadcast_permission: ''

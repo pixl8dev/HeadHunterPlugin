@@ -21,6 +21,8 @@ public class HeadHunterConfig {
     private boolean show_kill_count = true;
     private boolean show_head_count = true;
     private boolean show_head_collection_summary = true;
+    private boolean capitalize_mob_names = true;
+    private boolean fix_claim_plugins = false;
     private String broadcast_permission = "";
     
     // Looting settings
@@ -88,6 +90,12 @@ public class HeadHunterConfig {
         show_head_collection_summary = config.getBoolean("general.show_head_collection_summary", 
             originalConfig.getBoolean("general.show_head_collection_summary", true));
             
+        capitalize_mob_names = config.getBoolean("general.capitalize_mob_names",
+            originalConfig.getBoolean("general.capitalize_mob_names", true));
+            
+        fix_claim_plugins = config.getBoolean("general.fix_claim_plugins",
+            originalConfig.getBoolean("general.fix_claim_plugins", false));
+            
         broadcast_permission = config.getString("general.broadcast_permission", 
             originalConfig.getString("general.broadcast_permission", ""));
         
@@ -150,12 +158,20 @@ public class HeadHunterConfig {
         return show_head_count;
     }
     
+    public boolean shouldCapitalizeMobNames() {
+        return capitalize_mob_names;
+    }
+    
     public boolean shouldShowHeadCollectionSummary() {
         return show_head_collection_summary;
     }
     
     public String getBroadcastPermission() {
         return broadcast_permission;
+    }
+    
+    public boolean shouldFixClaimPlugins() {
+        return fix_claim_plugins;
     }
     
     // Looting settings getters

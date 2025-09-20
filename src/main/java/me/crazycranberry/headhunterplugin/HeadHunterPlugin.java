@@ -517,30 +517,45 @@ public final class HeadHunterPlugin extends JavaPlugin implements Listener {
         if (textureCode == null) {
             return item;
         }
-        PlayerProfile profile = Bukkit.createPlayerProfile("Skull");
-        PlayerTextures textures = profile.getTextures();
-        String jsonTexture = new String(Base64.getDecoder().decode(textureCode), StandardCharsets.UTF_8);
-        String url = JsonParser.parseString(jsonTexture).getAsJsonObject().getAsJsonObject("textures").getAsJsonObject("SKIN").get("url").getAsString();
         try {
+            // Create a profile with a valid UUID and name
+            PlayerProfile profile = Bukkit.createPlayerProfile(UUID.randomUUID(), "HeadHunter");
+            PlayerTextures textures = profile.getTextures();
+            String jsonTexture = new String(Base64.getDecoder().decode(textureCode), StandardCharsets.UTF_8);
+            String url = JsonParser.parseString(jsonTexture).getAsJsonObject().getAsJsonObject("textures").getAsJsonObject("SKIN").get("url").getAsString();
+            
+            // Set the skin texture
             textures.setSkin(new URL(url));
-        } catch (MalformedURLException e) {
-            throw new RuntimeException(e);
+            profile.setTextures(textures);
+            
+            // Set the owner profile if meta is not null
+            if (meta != null) {
+                meta.setOwnerProfile(profile);
+            } else {
+                getLogger().warning("Failed to set owner profile: ItemMeta is null");
+                return item;
+            }
+        } catch (Exception e) {
+            getLogger().warning("Failed to create player profile for head: " + e.getMessage());
+            return item;
         }
-        profile.setTextures(textures);
-        assert meta != null;
-        meta.setOwnerProfile(profile);
-        List<String> lore = new ArrayList<>();
-
-        lore.add(ChatColor.WHITE + headHunterConfig().head_owner_statement(killer.getName(), translateMob(headName)) + ChatColor.RESET);
-        lore.add(ChatColor.WHITE + headHunterConfig().head_secondary_statement() + ChatColor.RESET);
-
-        meta.setLore(lore);
-
+        
         String translatedName = translateMob(headName);
         meta.setDisplayName(translatedName);
-        meta.getPersistentDataContainer().set(NAME_KEY, PersistentDataType.STRING, translatedName);
-        meta.getPersistentDataContainer().set(LORE_KEY_1, PersistentDataType.STRING, lore.get(0));
-        meta.getPersistentDataContainer().set(LORE_KEY_2, PersistentDataType.STRING, lore.get(1));
+        
+        if (!headHunterConfig().shouldFixClaimPlugins()) {
+            // Only add custom lore and NBT data if not in claim plugin compatibility mode
+            List<String> lore = new ArrayList<>();
+            lore.add(ChatColor.WHITE + headHunterConfig().head_owner_statement(killer.getName(), translatedName) + ChatColor.RESET);
+            lore.add(ChatColor.WHITE + headHunterConfig().head_secondary_statement() + ChatColor.RESET);
+            meta.setLore(lore);
+            
+            // Store additional data in persistent data container
+            meta.getPersistentDataContainer().set(NAME_KEY, PersistentDataType.STRING, translatedName);
+            meta.getPersistentDataContainer().set(LORE_KEY_1, PersistentDataType.STRING, lore.get(0));
+            meta.getPersistentDataContainer().set(LORE_KEY_2, PersistentDataType.STRING, lore.get(1));
+        }
+        
         item.setItemMeta(meta);
         return item;
     }
@@ -572,18 +587,29 @@ public final class HeadHunterPlugin extends JavaPlugin implements Listener {
     public String translateMob(String mobNameEnglish) {
         String name = mobNameEnglish.toLowerCase();
         if (!mobNameTranslationConfig().isString(name)) {
-            //maybe it's a mob with a type... Let's try finding it's prefix mob type
-            for (String key : defaultMobNames().getKeys(false)) {
-                if (defaultMobNames().isConfigurationSection(key) && name.startsWith(key)) {
-                    name = name.replace(key + "_", key + ".");
-                }
+            //maybe it's a mob with a type... Let's try finding its prefix mob type
+            String[] nameParts = name.split(" ");
+            if (nameParts.length > 1) {
+                name = nameParts[0];
             }
         }
-        String translatedName = mobNameTranslationConfig().getString(name, defaultMobNames().getString(name));
+        String translatedName = mobNameTranslationConfig().getString(name, mobNameEnglish);
         if (translatedName == null) {
-            return mobNameEnglish;
+            translatedName = mobNameEnglish.replaceAll("_", " ").toLowerCase();
+        } else {
+            translatedName = translatedName.replaceAll("\\.", " ");
         }
-        return translatedName.replaceAll("\\.", " ");
+        
+        // Apply capitalization if enabled in config
+        if (headHunterConfig != null && headHunterConfig.shouldCapitalizeMobNames()) {
+            if (!translatedName.isEmpty()) {
+                // Capitalize first letter and keep the rest as is
+                translatedName = translatedName.substring(0, 1).toUpperCase() + 
+                               (translatedName.length() > 1 ? translatedName.substring(1) : "");
+            }
+        }
+        
+        return translatedName;
     }
 
     public String translateMobToEnglish(String renamedMob) {
