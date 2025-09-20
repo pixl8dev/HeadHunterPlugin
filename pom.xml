@@ -10,7 +10,7 @@
     <packaging>jar</packaging>
 
     <name>HeadHunterPlugin</name>
-    <description>Like a Pokemon Shiny Hunt but with Mob Heads</description>
+    <description>Mob heads plugin</description>
     
     <properties>
         <java.version>17</java.version>

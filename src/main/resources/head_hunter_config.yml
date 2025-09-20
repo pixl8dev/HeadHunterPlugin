@@ -31,4 +31,4 @@ messages:
     invalid_mob_name: "That mob does not exist. Try '/mobs' to view a list of all mobs."
   head_lore:
     owner_statement: "{COLOR:YELLOW}Killed by {COLOR:LIGHT_PURPLE}{PLAYER_NAME}{COLOR:YELLOW}"
-    secondary_statement: "{COLOR:GRAY}A mod by CrazyCranberry"
+    secondary_statement: "{COLOR:GRAY}A cool plugin by px86"
