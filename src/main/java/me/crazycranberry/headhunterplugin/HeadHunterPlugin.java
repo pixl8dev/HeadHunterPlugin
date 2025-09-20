@@ -114,38 +114,34 @@ public final class HeadHunterPlugin extends JavaPlugin implements Listener {
             Player killer = entity.getKiller();
             String name = getTrueVictimName(event);
             String mobName = translateMob(name);
-            double roll = Math.random();
             double dropRate = getDropRate(name, killer);
             
-            // Log the roll if enabled
+            // Log the drop if logging is enabled
             if (headHunterConfig().shouldLogRolls()) {
-                logger.info(String.format("%s killed %s and rolled %s for a %s drop rate.", 
-                    killer.getName(), mobName, roll, dropRate));
+                logger.info(String.format("%s killed %s and got a head (%.2f%% drop rate).", 
+                    killer.getName(), mobName, dropRate * 100));
             }
             
-            // Handle head drop
-            if (roll < dropRate) {
-                // Drop the head
-                entity.getWorld().dropItem(entity.getLocation(), makeSkull(name, killer));
+            // Drop the head
+            entity.getWorld().dropItem(entity.getLocation(), makeSkull(name, killer));
+            
+            // Broadcast the head drop if enabled
+            if (headHunterConfig().shouldBroadcastHeadDrops()) {
+                String broadcastMessage = headHunterConfig().head_drop_message(killer.getName(), mobName + ChatColor.RESET);
+                String permission = headHunterConfig().getBroadcastPermission();
                 
-                // Broadcast the head drop if enabled
-                if (headHunterConfig().shouldBroadcastHeadDrops()) {
-                    String broadcastMessage = headHunterConfig().head_drop_message(killer.getName(), mobName + ChatColor.RESET);
-                    String permission = headHunterConfig().getBroadcastPermission();
-                    
-                    if (permission == null || permission.isEmpty()) {
-                        // Broadcast to everyone if no permission is set
-                        getServer().broadcastMessage(broadcastMessage);
-                    } else {
-                        // Only broadcast to players with the required permission
-                        for (Player player : getServer().getOnlinePlayers()) {
-                            if (player.hasPermission(permission)) {
-                                player.sendMessage(broadcastMessage);
-                            }
+                if (permission == null || permission.isEmpty()) {
+                    // Broadcast to everyone if no permission is set
+                    getServer().broadcastMessage(broadcastMessage);
+                } else {
+                    // Only broadcast to players with the required permission
+                    for (Player player : getServer().getOnlinePlayers()) {
+                        if (player.hasPermission(permission)) {
+                            player.sendMessage(broadcastMessage);
                         }
-                        // Also send to console
-                        logger.info(ChatColor.stripColor(broadcastMessage));
                     }
+                    // Also send to console
+                    logger.info(ChatColor.stripColor(broadcastMessage));
                 }
             }
         }
