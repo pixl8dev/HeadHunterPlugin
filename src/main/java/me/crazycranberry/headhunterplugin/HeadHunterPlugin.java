@@ -85,11 +85,11 @@ public final class HeadHunterPlugin extends JavaPlugin implements Listener {
         
         // Load configurations
         try {
-            chanceConfig = loadConfig("chance_config.yml");
-            defaultChanceConfig = getOriginalConfig("chance_config.yml");
-            mobNameTranslationConfig = loadConfig("mob_name_translations.yml");
-            defaultMobNameTranslationConfig = getOriginalConfig("mob_name_translations.yml");
-            headHunterConfig = new HeadHunterConfig(loadConfig("head_hunter_config.yml"));
+            chanceConfig = loadConfig("chance.yml");
+            defaultChanceConfig = getOriginalConfig("chance.yml");
+            mobNameTranslationConfig = loadConfig("translations.yml");
+            defaultMobNameTranslationConfig = getOriginalConfig("translations.yml");
+            headHunterConfig = new HeadHunterConfig(loadConfig("config.yml"));
         } catch (Exception e) {
             logger.severe("Failed to load configuration files: " + e.getMessage());
             getServer().getPluginManager().disablePlugin(this);
@@ -222,8 +222,7 @@ public final class HeadHunterPlugin extends JavaPlugin implements Listener {
 
     private void registerCommandManager() {
         commandManager = new CommandManager(getServer(), chanceConfig, headHunterConfig);
-        setCommandManager("mobs", commandManager);
-        setCommandManager("headhunterrefresh", commandManager);
+        setCommandManager("headsreload", commandManager);
     }
 
     private void setCommandManager(String command, @NotNull CommandManager commandManager) {
@@ -259,16 +258,14 @@ public final class HeadHunterPlugin extends JavaPlugin implements Listener {
     }
 
     private YamlConfiguration getOriginalConfig(String configName) throws IOException, InvalidConfigurationException {
-        try {
-            YamlConfiguration originalConfig = new YamlConfiguration();
-            InputStream originalConfigStream = getPlugin().getResource(configName);
-            assert originalConfigStream != null;
-            InputStreamReader originalConfigReader = new InputStreamReader(originalConfigStream);
-            originalConfig.load(originalConfigReader);
-            return originalConfig;
-        } catch (InvalidConfigurationException | IOException e) {
-            logger.info("[ ERROR ] An error occured while trying to load the (original) " + configName + " file.");
-            throw e;
+        if (configName.equals("chance.yml")) {
+            return defaultChanceConfig();
+        } else if (configName.equals("translations.yml")) {
+            return defaultMobNames();
+        } else if (configName.equals("config.yml")) {
+            return originalHeadHunterConfig();
+        } else {
+            throw new InvalidConfigurationException("Unknown config file: " + configName);
         }
     }
 
@@ -277,7 +274,7 @@ public final class HeadHunterPlugin extends JavaPlugin implements Listener {
             return chanceConfig;
         }
         try {
-            chanceConfig = loadConfig("chance_config.yml", BackwardsCompatibilityUtils::updateChanceConfig);
+            chanceConfig = loadConfig("chance.yml", BackwardsCompatibilityUtils::updateChanceConfig);
         } catch (InvalidConfigurationException e) {
             e.printStackTrace();
         }
@@ -290,12 +287,12 @@ public final class HeadHunterPlugin extends JavaPlugin implements Listener {
         }
         defaultChanceConfig = new YamlConfiguration();
         try {
-            InputStream defaultChanceConfigStream = getResource("chance_config.yml");
+            InputStream defaultChanceConfigStream = getResource("chance.yml");
             assert defaultChanceConfigStream != null;
             InputStreamReader defaultChanceConfigReader = new InputStreamReader(defaultChanceConfigStream);
             defaultChanceConfig.load(defaultChanceConfigReader);
         } catch (InvalidConfigurationException | IOException e) {
-            logger.info("[ ERROR ] An error occured while trying to load the (default) chance file.");
+            logger.info("[ ERROR ] An error occurred while trying to load the (default) chance file.");
             e.printStackTrace();
         }
         return defaultChanceConfig;
@@ -307,15 +304,29 @@ public final class HeadHunterPlugin extends JavaPlugin implements Listener {
         }
         defaultMobNameTranslationConfig = new YamlConfiguration();
         try {
-            InputStream defaultChanceConfigStream = getResource("mob_name_translations.yml");
+            InputStream defaultChanceConfigStream = getResource("translations.yml");
             assert defaultChanceConfigStream != null;
             InputStreamReader defaultChanceConfigReader = new InputStreamReader(defaultChanceConfigStream);
             defaultMobNameTranslationConfig.load(defaultChanceConfigReader);
         } catch (InvalidConfigurationException | IOException e) {
-            logger.info("[ ERROR ] An error occured while trying to load the (default) mob name file.");
+            logger.info("[ ERROR ] An error occurred while trying to load the (default) mob name file.");
             e.printStackTrace();
         }
         return defaultMobNameTranslationConfig;
+    }
+    
+    private YamlConfiguration originalHeadHunterConfig() {
+        YamlConfiguration config = new YamlConfiguration();
+        try {
+            InputStream defaultConfigStream = getResource("config.yml");
+            assert defaultConfigStream != null;
+            InputStreamReader defaultConfigReader = new InputStreamReader(defaultConfigStream);
+            config.load(defaultConfigReader);
+        } catch (InvalidConfigurationException | IOException e) {
+            logger.info("[ ERROR ] An error occurred while trying to load the (default) config file.");
+            e.printStackTrace();
+        }
+        return config;
     }
 
     private YamlConfiguration mobNameTranslationConfig() {
@@ -323,7 +334,7 @@ public final class HeadHunterPlugin extends JavaPlugin implements Listener {
             return mobNameTranslationConfig;
         }
         try {
-            mobNameTranslationConfig = loadConfig("mob_name_translations.yml", BackwardsCompatibilityUtils::updateMobNameConfig);
+            mobNameTranslationConfig = loadConfig("translations.yml", BackwardsCompatibilityUtils::updateMobNameConfig);
         } catch (InvalidConfigurationException e) {
             e.printStackTrace();
         }
@@ -336,7 +347,7 @@ public final class HeadHunterPlugin extends JavaPlugin implements Listener {
         }
         YamlConfiguration headHunterYamlConfig = null;
         try {
-            headHunterYamlConfig = loadConfig("head_hunter_config.yml");
+            headHunterYamlConfig = loadConfig("config.yml");
         } catch (InvalidConfigurationException e) {
             e.printStackTrace();
         }
@@ -439,9 +450,9 @@ public final class HeadHunterPlugin extends JavaPlugin implements Listener {
 
     public String refreshYmlConfigurations() {
         try {
-            chanceConfig = loadConfig("chance_config.yml");
-            mobNameTranslationConfig = loadConfig("mob_name_translations.yml");
-            headHunterConfig = new HeadHunterConfig(loadConfig("head_hunter_config.yml"));
+            chanceConfig = loadConfig("chance.yml");
+            mobNameTranslationConfig = loadConfig("translations.yml");
+            headHunterConfig = new HeadHunterConfig(loadConfig("config.yml"));
             commandManager.reloadYmlConfigs(chanceConfig, headHunterConfig);
             return "Successfully loaded configs.";
         } catch (Exception e) {

@@ -32,14 +32,7 @@ public class CommandManager implements CommandExecutor, TabCompleter {
 
     @Override
     public boolean onCommand(@NotNull CommandSender sender, @NotNull Command command, @NotNull String label, @NotNull String[] args) {
-        if (command.getName().equalsIgnoreCase("mobs") && sender instanceof Player) {
-            Player p = (Player) sender;
-            p.sendMessage(getValidMobsList().stream()
-                .map(n -> getPlugin().translateMob(n))
-                .toList()
-                .toString());
-            return true;
-        } else if (command.getName().equalsIgnoreCase("headhunterrefresh")) {
+        if (command.getName().equalsIgnoreCase("headsreload")) {
             String refreshResponse = getPlugin().refreshYmlConfigurations();
             if (sender instanceof Player) {
                 Player p = (Player) sender;
@@ -48,12 +41,6 @@ public class CommandManager implements CommandExecutor, TabCompleter {
             return true;
         }
         return false;
-    }
-
-    private List<String> getValidMobsList() {
-        return chanceConfig.getKeys(false).stream()
-            .filter(key -> !key.equals("VERSION"))
-            .toList();
     }
 
     @Override

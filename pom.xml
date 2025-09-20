@@ -5,11 +5,11 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>me.crazycranberry</groupId>
-    <artifactId>HeadHunterPlugin</artifactId>
+    <artifactId>Heads</artifactId>
     <version>3.0.4</version>
     <packaging>jar</packaging>
 
-    <name>HeadHunterPlugin</name>
+    <name>Heads</name>
     <description>Mob heads plugin</description>
     
     <properties>

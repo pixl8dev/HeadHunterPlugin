@@ -1,19 +1,13 @@
-name: HeadHunterPlugin
+name: Heads
 version: ${project.version}
 main: me.crazycranberry.headhunterplugin.HeadHunterPlugin
 api-version: '1.21.5'
 authors: [px86]
 description: Mob heads plugin
 commands:
-  mobs:
-    description: List out all mobs eligible for the /hc and /kc commands.
-    usage: "Usage: /mobs"
-  heads:
-    description: List all unique heads you've received.
-    usage: "Usage: /heads"
-  headhunterrefresh:
-    description: Refresh all yml file configurations.
-    usage: "Usage: /headhunterrefresh"
+  headsreload:
+    description: Reload all configuration files.
+    usage: "Usage: /headsreload"
     permission: admin
     permission-message: You do not have permission to refresh.
 permissions:

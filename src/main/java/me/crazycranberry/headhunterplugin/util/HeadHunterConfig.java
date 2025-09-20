@@ -36,12 +36,12 @@ public class HeadHunterConfig {
     public HeadHunterConfig(YamlConfiguration config) {
         originalConfig = new YamlConfiguration();
         try {
-            InputStream defaultChanceConfigStream = getPlugin().getResource("head_hunter_config.yml");
+            InputStream defaultChanceConfigStream = getPlugin().getResource("config.yml");
             assert defaultChanceConfigStream != null;
             InputStreamReader defaultChanceConfigReader = new InputStreamReader(defaultChanceConfigStream);
             originalConfig.load(defaultChanceConfigReader);
         } catch (InvalidConfigurationException | IOException e) {
-            logger.info("[ ERROR ] An error occured while trying to load the (default) head_hunter_config file.");
+            logger.info("[ ERROR ] An error occurred while trying to load the (default) config file.");
             e.printStackTrace();
         }
         loadConfig(config);
