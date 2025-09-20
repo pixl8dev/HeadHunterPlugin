@@ -15,11 +15,8 @@ import static me.crazycranberry.headhunterplugin.HeadHunterPlugin.logger;
 public class HeadHunterConfig {
     private YamlConfiguration originalConfig;
     // General settings
-    private boolean log_rolls = true;
+    private boolean log_rolls = false;
     private boolean broadcast_head_drops = true;
-    private boolean show_kill_count = true;
-    private boolean show_head_count = true;
-    private boolean show_head_collection_summary = true;
     private boolean capitalize_mob_names = true;
     private boolean fix_claim_plugins = false;
     private String broadcast_permission = "";
@@ -72,19 +69,10 @@ public class HeadHunterConfig {
     public void loadConfig(YamlConfiguration config) {
         // General settings
         log_rolls = config.getBoolean("general.log_rolls", 
-            config.getBoolean("log_rolls", originalConfig.getBoolean("general.log_rolls", true)));
+            config.getBoolean("log_rolls", originalConfig.getBoolean("general.log_rolls", false)));
             
         broadcast_head_drops = config.getBoolean("general.broadcast_head_drops", 
             originalConfig.getBoolean("general.broadcast_head_drops", true));
-            
-        show_kill_count = config.getBoolean("general.show_kill_count", 
-            originalConfig.getBoolean("general.show_kill_count", true));
-            
-        show_head_count = config.getBoolean("general.show_head_count", 
-            originalConfig.getBoolean("general.show_head_count", true));
-            
-        show_head_collection_summary = config.getBoolean("general.show_head_collection_summary", 
-            originalConfig.getBoolean("general.show_head_collection_summary", true));
             
         capitalize_mob_names = config.getBoolean("general.capitalize_mob_names",
             originalConfig.getBoolean("general.capitalize_mob_names", true));
@@ -142,20 +130,8 @@ public class HeadHunterConfig {
         return broadcast_head_drops;
     }
     
-    public boolean shouldShowKillCount() {
-        return show_kill_count;
-    }
-    
-    public boolean shouldShowHeadCount() {
-        return show_head_count;
-    }
-    
     public boolean shouldCapitalizeMobNames() {
         return capitalize_mob_names;
-    }
-    
-    public boolean shouldShowHeadCollectionSummary() {
-        return show_head_collection_summary;
     }
     
     public String getBroadcastPermission() {
@@ -180,32 +156,9 @@ public class HeadHunterConfig {
         return log_rolls;
     }
 
+    // Message getters
     public String head_drop_message(String playerName, String mobName) {
-        return head_drop
-                .replace("{PLAYER_NAME}", playerName)
-                .replace("{MOB_NAME}", mobName);
-    }
-
-    public String kill_count_message(String playerName, String number, String mobName) {
-        return kill_count
-                .replace("{PLAYER_NAME}", playerName)
-                .replace("{NUMBER}", number)
-                .replace("{MOB_NAME}", mobName);
-    }
-
-    public String head_count_message(String playerName, String number, String mobName) {
-        return head_count
-                .replace("{PLAYER_NAME}", playerName)
-                .replace("{NUMBER}", number)
-                .replace("{MOB_NAME}", mobName);
-    }
-
-    public String heads_message(String playerName, String number, String total, String headList) {
-        return heads
-                .replace("{PLAYER_NAME}", playerName)
-                .replace("{NUMBER}", number)
-                .replace("{TOTAL}", total)
-                .replace("{HEAD_LIST}", headList);
+        return String.format("%s got a %s head!", playerName, mobName);
     }
 
     public String missing_mob_name_message() {

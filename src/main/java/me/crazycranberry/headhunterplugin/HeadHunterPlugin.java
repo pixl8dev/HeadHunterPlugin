@@ -74,8 +74,6 @@ public final class HeadHunterPlugin extends JavaPlugin implements Listener {
     HeadHunterConfig headHunterConfig;
     YamlConfiguration chanceConfig;
     YamlConfiguration defaultChanceConfig;
-    YamlConfiguration headLogConfig;
-    YamlConfiguration kcLogConfig;
     YamlConfiguration mobNameTranslationConfig;
     YamlConfiguration defaultMobNameTranslationConfig;
     CommandManager commandManager;
@@ -84,18 +82,28 @@ public final class HeadHunterPlugin extends JavaPlugin implements Listener {
     public void onEnable() {
         // Plugin startup logic
         plugin = this;
+        
+        // Load configurations
+        try {
+            chanceConfig = loadConfig("chance_config.yml");
+            defaultChanceConfig = getOriginalConfig("chance_config.yml");
+            mobNameTranslationConfig = loadConfig("mob_name_translations.yml");
+            defaultMobNameTranslationConfig = getOriginalConfig("mob_name_translations.yml");
+            headHunterConfig = new HeadHunterConfig(loadConfig("head_hunter_config.yml"));
+        } catch (Exception e) {
+            logger.severe("Failed to load configuration files: " + e.getMessage());
+            getServer().getPluginManager().disablePlugin(this);
+            return;
+        }
+        
+        // Register commands and events
         registerCommandManager();
         registerEvents();
     }
 
     @Override
     public void onDisable() {
-        try {
-            kcConfig().save(getDataFolder() + "" + File.separatorChar + "kc_log.yml");
-            hcConfig().save(getDataFolder() + "" + File.separatorChar + "head_log.yml");
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        // Cleanup if needed
     }
 
 
@@ -139,36 +147,6 @@ public final class HeadHunterPlugin extends JavaPlugin implements Listener {
                         logger.info(ChatColor.stripColor(broadcastMessage));
                     }
                 }
-                
-                // Log the head drop
-                logKillOrDrop(killer, name.replace(".", "_"), hcConfig());
-                
-                // Show head collection summary if enabled
-                if (headHunterConfig().shouldShowHeadCollectionSummary()) {
-                    // This would be a good place to add periodic head collection summary
-                    // For now, we'll just show the current head count for this mob
-                    if (headHunterConfig().shouldShowHeadCount()) {
-                        int headCount = hcConfig().getInt(killer.getUniqueId() + "." + name.replace(".", "_"), 0);
-                        killer.sendMessage(headHunterConfig().head_count_message(
-                            killer.getName(), 
-                            String.valueOf(headCount), 
-                            mobName + ChatColor.RESET
-                        ));
-                    }
-                }
-            }
-            
-            // Log the kill for kill count if enabled
-            if (headHunterConfig().shouldShowKillCount()) {
-                logKillOrDrop(killer, name.replace(".", "_"), kcConfig());
-                
-                // Show kill count message
-                int killCount = kcConfig().getInt(killer.getUniqueId() + "." + name.replace(".", "_"), 0);
-                killer.sendMessage(headHunterConfig().kill_count_message(
-                    killer.getName(), 
-                    String.valueOf(killCount), 
-                    mobName + ChatColor.RESET
-                ));
             }
         }
     }
@@ -239,11 +217,8 @@ public final class HeadHunterPlugin extends JavaPlugin implements Listener {
 
 
     private void registerCommandManager() {
-        commandManager = new CommandManager(getServer(), chanceConfig(), kcConfig(), hcConfig(), headHunterConfig());
-        setCommandManager("kc", commandManager);
-        setCommandManager("hc", commandManager);
+        commandManager = new CommandManager(getServer(), chanceConfig, headHunterConfig);
         setCommandManager("mobs", commandManager);
-        setCommandManager("heads", commandManager);
         setCommandManager("headhunterrefresh", commandManager);
     }
 
@@ -339,30 +314,6 @@ public final class HeadHunterPlugin extends JavaPlugin implements Listener {
         return defaultMobNameTranslationConfig;
     }
 
-    private YamlConfiguration hcConfig() {
-        if (headLogConfig != null) {
-            return headLogConfig;
-        }
-        try {
-            headLogConfig = loadConfig("head_log.yml", BackwardsCompatibilityUtils::updateLogConfig);
-        } catch (InvalidConfigurationException e) {
-            e.printStackTrace();
-        }
-        return headLogConfig;
-    }
-
-    private YamlConfiguration kcConfig() {
-        if (kcLogConfig != null) {
-            return kcLogConfig;
-        }
-        try {
-            kcLogConfig = loadConfig("kc_log.yml", BackwardsCompatibilityUtils::updateLogConfig);
-        } catch (InvalidConfigurationException e) {
-            e.printStackTrace();
-        }
-        return kcLogConfig;
-    }
-
     private YamlConfiguration mobNameTranslationConfig() {
         if (mobNameTranslationConfig != null) {
             return mobNameTranslationConfig;
@@ -387,32 +338,6 @@ public final class HeadHunterPlugin extends JavaPlugin implements Listener {
         }
         headHunterConfig = new HeadHunterConfig(headHunterYamlConfig);
         return headHunterConfig;
-    }
-
-    private double getDropRate(String mobName, Player killer) {
-        String yamlMobName = "chance_percent." + mobName.toLowerCase();
-        double dropRate = chanceConfig().getDouble(yamlMobName, defaultChanceConfig().getDouble(yamlMobName));
-        if (headHunterConfig().looting_matters()) {
-            int looting_level = killer.getInventory().getItemInMainHand().getEnchantmentLevel(Enchantment.LOOT_BONUS_MOBS);
-            dropRate = dropRate * (1 + (looting_level * headHunterConfig().looting_multiplier()));
-        }
-        return dropRate;
-    }
-
-    private void logKillOrDrop(Player killer, String victim, YamlConfiguration config) {
-        if (config.contains(String.format("%s.%s", killer.getName(), victim))) {
-            config.set(String.format("%s.%s", killer.getName(), victim), config.getInt(String.format("%s.%s", killer.getName(), victim)) + 1);
-        } else if (config.contains(killer.getName())) {
-            ConfigurationSection cs = config.getConfigurationSection(killer.getName());
-            if (cs == null) {
-                logger.info(String.format("For some weird reason, %s has a null ConfigurationSection?", killer.getName()));
-                return;
-            }
-            cs.set(victim, 1);
-        } else {
-            ConfigurationSection cs = config.createSection(killer.getName());
-            cs.set(victim, 1);
-        }
     }
 
     private String getTrueVictimName(EntityDeathEvent event) {
@@ -513,7 +438,7 @@ public final class HeadHunterPlugin extends JavaPlugin implements Listener {
             chanceConfig = loadConfig("chance_config.yml");
             mobNameTranslationConfig = loadConfig("mob_name_translations.yml");
             headHunterConfig = new HeadHunterConfig(loadConfig("head_hunter_config.yml"));
-            commandManager.reloadYmlConfigs(chanceConfig(), kcConfig(), hcConfig(), headHunterConfig());
+            commandManager.reloadYmlConfigs(chanceConfig, headHunterConfig);
             return "Successfully loaded configs.";
         } catch (Exception e) {
             e.printStackTrace();
@@ -554,12 +479,50 @@ public final class HeadHunterPlugin extends JavaPlugin implements Listener {
     }
 
     public String translateMobToEnglish(String renamedMob) {
-        String name = renamedMob.toLowerCase();
-        for (String key : mobNameTranslationConfig().getKeys(true)) {
-            if (mobNameTranslationConfig().isString(key) && mobNameTranslationConfig().getString(key).equalsIgnoreCase(name)) {
-                return key.toUpperCase().replace(".", "_");
+        ConfigurationSection translations = mobNameTranslationConfig().getConfigurationSection("mobs");
+        if (translations == null) {
+            return renamedMob;
+        }
+        for (String key : translations.getKeys(false)) {
+            if (translations.getString(key, "").equalsIgnoreCase(renamedMob)) {
+                return key.toUpperCase();
             }
         }
         return renamedMob;
+    }
+    
+    private double getDropRate(String mobName, Player player) {
+        // Get the base drop rate from the configuration
+        double dropRate = chanceConfig().getDouble(mobName, 0.0);
+        
+        // If the mob isn't in the config, check if it's a variant (e.g., ZOMBIE.VILLAGER)
+        if (dropRate == 0.0 && mobName.contains(".")) {
+            String baseMob = mobName.split("\\.")[0];
+            dropRate = chanceConfig().getDouble(baseMob, 0.0);
+        }
+        
+        // If we still don't have a drop rate, use the default from the default config
+        if (dropRate == 0.0) {
+            dropRate = defaultChanceConfig().getDouble(mobName, 0.0);
+            
+            // If it's a variant, try the base mob in the default config
+            if (dropRate == 0.0 && mobName.contains(".")) {
+                String baseMob = mobName.split("\\.")[0];
+                dropRate = defaultChanceConfig().getDouble(baseMob, 0.0);
+            }
+        }
+        
+        // Apply looting bonus if the player has a looting sword
+        if (player.getInventory().getItemInMainHand() != null) {
+            int lootingLevel = player.getInventory().getItemInMainHand().getEnchantmentLevel(Enchantment.LOOT_BONUS_MOBS);
+            if (lootingLevel > 0) {
+                // Each level of looting increases the drop rate by 0.5% (0.005)
+                dropRate += (0.005 * lootingLevel);
+                // Cap at 100% drop rate
+                dropRate = Math.min(dropRate, 1.0);
+            }
+        }
+        
+        return dropRate;
     }
 }
