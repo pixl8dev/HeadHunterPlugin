@@ -413,9 +413,13 @@ public final class HeadHunterPlugin extends JavaPlugin implements Listener {
         if (textureCode == null || textureCode.isBlank()) {
             return item;
         }
+        
+        // Create a consistent UUID based on the mob type to ensure stackability
+        UUID consistentUuid = UUID.nameUUIDFromBytes(("HeadHunter_" + mobHead.name()).getBytes(StandardCharsets.UTF_8));
+        
         try {
-            // Create a profile with a valid UUID and name
-            PlayerProfile profile = Bukkit.createPlayerProfile(UUID.randomUUID(), "HeadHunter");
+            // Create a profile with a consistent UUID based on the mob type
+            PlayerProfile profile = Bukkit.createPlayerProfile(consistentUuid, "HeadHunter");
             PlayerTextures textures = profile.getTextures();
             String jsonTexture = new String(Base64.getDecoder().decode(textureCode), StandardCharsets.UTF_8);
             String url = JsonParser.parseString(jsonTexture).getAsJsonObject().getAsJsonObject("textures").getAsJsonObject("SKIN").get("url").getAsString();
@@ -437,23 +441,30 @@ public final class HeadHunterPlugin extends JavaPlugin implements Listener {
         }
         
         // Translate using the enum key (e.g., "cow_temperate") to support nested translation keys
-        String translatedName = translateMob(mobHead.name().toLowerCase());
-        meta.setDisplayName(translatedName);
+        // Use a consistent display name without the killer's name for stackability
+        String displayName = translateMob(mobHead.name().toLowerCase());
+        meta.setDisplayName(displayName);
         
         if (!headHunterConfig().shouldFixClaimPlugins()) {
-            // Only add custom lore and NBT data if not in claim plugin compatibility mode
+            // Use a simplified lore that's consistent for each mob type to ensure stackability
             List<String> lore = new ArrayList<>();
-            lore.add(ChatColor.WHITE + headHunterConfig().head_owner_statement(killer.getName(), translatedName) + ChatColor.RESET);
-            lore.add(ChatColor.WHITE + headHunterConfig().head_secondary_statement() + ChatColor.RESET);
-            meta.setLore(lore);
+            // Store the killer's name in a separate line that won't prevent stacking
+            String ownerInfo = headHunterConfig().head_owner_statement(killer.getName(), "");
+            String secondaryInfo = headHunterConfig().head_secondary_statement();
             
-            // Store additional data in persistent data container
-            meta.getPersistentDataContainer().set(NAME_KEY, PersistentDataType.STRING, translatedName);
-            meta.getPersistentDataContainer().set(LORE_KEY_1, PersistentDataType.STRING, lore.get(0));
-            meta.getPersistentDataContainer().set(LORE_KEY_2, PersistentDataType.STRING, lore.get(1));
+            // Store the actual mob name in the persistent data container
+            meta.getPersistentDataContainer().set(NAME_KEY, PersistentDataType.STRING, displayName);
+            meta.getPersistentDataContainer().set(LORE_KEY_1, PersistentDataType.STRING, ownerInfo);
+            meta.getPersistentDataContainer().set(LORE_KEY_2, PersistentDataType.STRING, secondaryInfo);
+            
+            // Add a single line of lore that shows it's a mob head
+            lore.add(ChatColor.GRAY + "Mob Head: " + displayName);
+            meta.setLore(lore);
         }
         
+        // Set the item meta and amount to 1 (this ensures consistent stacking)
         item.setItemMeta(meta);
+        item.setAmount(1);
         return item;
     }
 
