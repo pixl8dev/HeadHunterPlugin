@@ -86,9 +86,10 @@ public final class HeadHunterPlugin extends JavaPlugin implements Listener {
         
         // Load configurations
         try {
-            chanceConfig = loadConfig("chance.yml");
+            // Load with backwards-compatibility transformations where needed
+            chanceConfig = loadConfig("chance.yml", BackwardsCompatibilityUtils::updateChanceConfig);
             defaultChanceConfig = getOriginalConfig("chance.yml");
-            mobNameTranslationConfig = loadConfig("translations.yml");
+            mobNameTranslationConfig = loadConfig("translations.yml", BackwardsCompatibilityUtils::updateMobNameConfig);
             defaultMobNameTranslationConfig = getOriginalConfig("translations.yml");
             headHunterConfig = new HeadHunterConfig(loadConfig("config.yml"));
         } catch (Exception e) {
@@ -118,31 +119,37 @@ public final class HeadHunterPlugin extends JavaPlugin implements Listener {
             double dropRate = getDropRate(name, killer);
             
             // Log the drop if logging is enabled
+            double roll = Math.random();
+            boolean shouldDrop = roll < dropRate;
+            
             if (headHunterConfig().shouldLogRolls()) {
-                logger.info(String.format("%s killed %s and got a head (%.2f%% drop rate).", 
-                    killer.getName(), mobName, dropRate * 100));
+                logger.info(String.format("Head roll: player=%s mob=%s dropRate=%.4f (%.2f%%) roll=%.4f -> %s",
+                        killer.getName(), mobName, dropRate, dropRate * 100, roll, 
+                        shouldDrop ? "DROP" : "NO DROP"));
             }
-            
-            // Drop the head
-            entity.getWorld().dropItem(entity.getLocation(), makeSkull(name, killer));
-            
-            // Broadcast the head drop if enabled
-            if (headHunterConfig().shouldBroadcastHeadDrops()) {
-                String broadcastMessage = headHunterConfig().head_drop_message(killer.getName(), mobName + ChatColor.RESET);
-                String permission = headHunterConfig().getBroadcastPermission();
-                
-                if (permission == null || permission.isEmpty()) {
-                    // Broadcast to everyone if no permission is set
-                    getServer().broadcastMessage(broadcastMessage);
-                } else {
-                    // Only broadcast to players with the required permission
-                    for (Player player : getServer().getOnlinePlayers()) {
-                        if (player.hasPermission(permission)) {
-                            player.sendMessage(broadcastMessage);
+
+            if (shouldDrop) {
+                // Drop the head
+                entity.getWorld().dropItem(entity.getLocation(), makeSkull(name, killer));
+
+                // Broadcast the head drop if enabled
+                if (headHunterConfig().shouldBroadcastHeadDrops()) {
+                    String broadcastMessage = headHunterConfig().head_drop_message(killer.getName(), mobName + ChatColor.RESET);
+                    String permission = headHunterConfig().getBroadcastPermission();
+
+                    if (permission == null || permission.isEmpty()) {
+                        // Broadcast to everyone if no permission is set
+                        getServer().broadcastMessage(broadcastMessage);
+                    } else {
+                        // Only broadcast to players with the required permission
+                        for (Player player : getServer().getOnlinePlayers()) {
+                            if (player.hasPermission(permission)) {
+                                player.sendMessage(broadcastMessage);
+                            }
                         }
+                        // Also send to console
+                        logger.info(ChatColor.stripColor(broadcastMessage));
                     }
-                    // Also send to console
-                    logger.info(ChatColor.stripColor(broadcastMessage));
                 }
             }
         }
@@ -519,37 +526,81 @@ public final class HeadHunterPlugin extends JavaPlugin implements Listener {
     }
     
     private double getDropRate(String mobName, Player player) {
-        // Get the base drop rate from the configuration
-        double dropRate = chanceConfig().getDouble(mobName, 0.0);
-        
-        // If the mob isn't in the config, check if it's a variant (e.g., ZOMBIE.VILLAGER)
-        if (dropRate == 0.0 && mobName.contains(".")) {
-            String baseMob = mobName.split("\\.")[0];
-            dropRate = chanceConfig().getDouble(baseMob, 0.0);
+        // Normalize to config key format
+        // Examples:
+        //  - "AXOLOTL.LUCY" -> "axolotl.lucy"
+        //  - "COW_TEMPERATE" -> "cow.temperate"
+        //  - "ZOMBIE" -> "zombie"
+        String raw = mobName.toLowerCase();
+        String normalized;
+        if (raw.contains(".")) {
+            normalized = raw; // already variant format
+        } else if (raw.contains("_")) {
+            String[] parts = raw.split("_", 2);
+            Set<String> nestedVariantBases = new HashSet<>(Arrays.asList(
+                    "axolotl", "cat", "chicken", "cow", "fox", "frog", "horse", "llama",
+                    "mushroom_cow", "panda", "parrot", "pig", "rabbit", "sheep", "trader_llama",
+                    "wolf"
+            ));
+            if (parts.length == 2 && nestedVariantBases.contains(parts[0])) {
+                normalized = parts[0] + "." + parts[1];
+            } else {
+                normalized = raw; // keep flat (e.g., zombie_pigman)
+            }
+        } else {
+            normalized = raw;
         }
-        
-        // If we still don't have a drop rate, use the default from the default config
+
+        String fullPath = "chance_percent." + normalized;
+        String baseMob = normalized.contains(".") ? normalized.substring(0, normalized.indexOf('.')) : normalized;
+
+        double dropRate = 0.0;
+        String matchedPath = null;
+
+        // 1) Primary: under chance_percent
+        dropRate = chanceConfig().getDouble(fullPath, 0.0);
+        if (dropRate > 0.0) matchedPath = fullPath;
+        if (dropRate == 0.0 && normalized.contains(".")) {
+            String basePath = "chance_percent." + baseMob;
+            dropRate = chanceConfig().getDouble(basePath, 0.0);
+            if (dropRate > 0.0) matchedPath = basePath;
+        }
+
+        // 2) Secondary: root-level keys (back-compat)
         if (dropRate == 0.0) {
-            dropRate = defaultChanceConfig().getDouble(mobName, 0.0);
-            
-            // If it's a variant, try the base mob in the default config
-            if (dropRate == 0.0 && mobName.contains(".")) {
-                String baseMob = mobName.split("\\.")[0];
-                dropRate = defaultChanceConfig().getDouble(baseMob, 0.0);
-            }
+            dropRate = chanceConfig().getDouble(normalized, 0.0);
+            if (dropRate > 0.0) matchedPath = normalized;
         }
-        
-        // Apply looting bonus if the player has a looting sword
-        if (player.getInventory().getItemInMainHand() != null) {
-            int lootingLevel = player.getInventory().getItemInMainHand().getEnchantmentLevel(Enchantment.LOOTING);
-            if (lootingLevel > 0) {
-                // Each level of looting increases the drop rate by 0.5% (0.005)
-                dropRate += (0.005 * lootingLevel);
-                // Cap at 100% drop rate
-                dropRate = Math.min(dropRate, 1.0);
-            }
+        if (dropRate == 0.0 && normalized.contains(".")) {
+            dropRate = chanceConfig().getDouble(baseMob, 0.0);
+            if (dropRate > 0.0) matchedPath = baseMob;
         }
-        
+
+        // 3) Default resource fallbacks
+        if (dropRate == 0.0) {
+            dropRate = defaultChanceConfig().getDouble(fullPath, 0.0);
+            if (dropRate > 0.0) matchedPath = "(default) " + fullPath;
+        }
+        if (dropRate == 0.0 && normalized.contains(".")) {
+            String basePath = "chance_percent." + baseMob;
+            dropRate = defaultChanceConfig().getDouble(basePath, 0.0);
+            if (dropRate > 0.0) matchedPath = "(default) " + basePath;
+        }
+        if (dropRate == 0.0) {
+            dropRate = defaultChanceConfig().getDouble(normalized, 0.0);
+            if (dropRate > 0.0) matchedPath = "(default) " + normalized;
+        }
+        if (dropRate == 0.0 && normalized.contains(".")) {
+            dropRate = defaultChanceConfig().getDouble(baseMob, 0.0);
+            if (dropRate > 0.0) matchedPath = "(default) " + baseMob;
+        }
+
+        // Debug logging if enabled
+        if (headHunterConfig().shouldLogRolls()) {
+            logger.info(String.format("Resolved key: %s | Base: %s | Matched: %s | Drop rate for %s: %.4f (%.2f%%)",
+                    fullPath, baseMob, matchedPath, mobName, dropRate, dropRate * 100));
+        }
+
         return dropRate;
     }
 }
