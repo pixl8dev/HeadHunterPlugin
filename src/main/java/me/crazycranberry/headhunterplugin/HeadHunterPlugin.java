@@ -387,11 +387,11 @@ public final class HeadHunterPlugin extends JavaPlugin implements Listener {
             case "WOLF":
                 return "WOLF";
             case "COW":
-                return "COW_TEMPERATE";
+                return "COW_" + ((Cow) event.getEntity()).getVariant().getKey().getKey().toUpperCase();
             case "PIG":
-                return "PIG_TEMPERATE";
+                return "PIG_" + ((Pig) event.getEntity()).getVariant().getKey().getKey().toUpperCase();
             case "CHICKEN":
-                return "CHICKEN_TEMPERATE";
+                return "CHICKEN_" + ((Chicken) event.getEntity()).getVariant().getKey().getKey().toUpperCase();
             default:
                 return name;
         }
@@ -541,7 +541,7 @@ public final class HeadHunterPlugin extends JavaPlugin implements Listener {
         
         // Apply looting bonus if the player has a looting sword
         if (player.getInventory().getItemInMainHand() != null) {
-            int lootingLevel = player.getInventory().getItemInMainHand().getEnchantmentLevel(Enchantment.LOOT_BONUS_MOBS);
+            int lootingLevel = player.getInventory().getItemInMainHand().getEnchantmentLevel(Enchantment.LOOTING);
             if (lootingLevel > 0) {
                 // Each level of looting increases the drop rate by 0.5% (0.005)
                 dropRate += (0.005 * lootingLevel);

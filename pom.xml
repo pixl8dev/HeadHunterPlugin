@@ -17,7 +17,7 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>17</maven.compiler.source>
         <maven.compiler.target>17</maven.compiler.target>
-        <paper.version>1.20.4</paper.version>
+        <paper.version>1.21.5</paper.version>
     </properties>
     
     <repositories>
