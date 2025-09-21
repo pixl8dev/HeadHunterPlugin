@@ -109,14 +109,14 @@ pillager: pillager
 polar_bear: polar_bear
 pufferfish: pufferfish
 rabbit:
-  black: sheep_black
-  black_and_white: sheep_black_and_white
-  brown: sheep_brown
-  gold: sheep_gold
-  salt_and_pepper: sheep_salt_and_pepper
-  the_killer_bunny: sheep_the_killer_bunny
-  toast: sheep_toast
-  white: sheep_white
+  black: rabbit_black
+  black_and_white: rabbit_black_and_white
+  brown: rabbit_brown
+  gold: rabbit_gold
+  salt_and_pepper: rabbit_salt_and_pepper
+  the_killer_bunny: rabbit_the_killer_bunny
+  toast: rabbit_toast
+  white: rabbit_white
 ravager: ravager
 salmon: salmon
 sheep:

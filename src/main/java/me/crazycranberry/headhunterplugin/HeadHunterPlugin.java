@@ -409,7 +409,8 @@ public final class HeadHunterPlugin extends JavaPlugin implements Listener {
         SkullMeta meta = (SkullMeta) item.getItemMeta();
         MobHeads mobHead = MobHeads.valueOf(headName.replace(".", "_"));
         String textureCode = mobHead.getTexture();
-        if (textureCode == null) {
+        // fix invalid textures
+        if (textureCode == null || textureCode.isBlank()) {
             return item;
         }
         try {
@@ -593,6 +594,22 @@ public final class HeadHunterPlugin extends JavaPlugin implements Listener {
         if (dropRate == 0.0 && normalized.contains(".")) {
             dropRate = defaultChanceConfig().getDouble(baseMob, 0.0);
             if (dropRate > 0.0) matchedPath = "(default) " + baseMob;
+        }
+
+        // Apply Looting enchantment if enabled
+        if (player != null && headHunterConfig().looting_matters()) {
+            Enchantment lootingEnchant = Enchantment.getByKey(NamespacedKey.minecraft("looting"));
+            int lootingLevel = 0;
+            if (lootingEnchant != null) {
+                ItemStack weapon = player.getInventory().getItemInMainHand();
+                if (weapon != null) {
+                    lootingLevel = weapon.getEnchantmentLevel(lootingEnchant);
+                }
+            }
+            if (lootingLevel > 0) {
+                double multiplier = headHunterConfig().looting_multiplier();
+                dropRate = dropRate * (1.0 + (lootingLevel * multiplier));
+            }
         }
 
         // Debug logging if enabled

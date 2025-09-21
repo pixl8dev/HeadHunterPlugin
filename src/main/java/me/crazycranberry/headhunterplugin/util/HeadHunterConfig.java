@@ -162,7 +162,10 @@ public class HeadHunterConfig {
 
     // Message getters
     public String head_drop_message(String playerName, String mobName) {
-        return String.format("%s got a %s head!", playerName, mobName);
+        // placeholders
+        return head_drop
+                .replace("{PLAYER_NAME}", playerName)
+                .replace("{MOB_NAME}", mobName);
     }
 
     public String missing_mob_name_message() {
@@ -201,7 +204,7 @@ public class HeadHunterConfig {
                 .replace("{COLOR:ITALIC}",  ChatColor.ITALIC.toString())
                 .replace("{COLOR:LIGHT_PURPLE}",  ChatColor.LIGHT_PURPLE.toString())
                 .replace("{COLOR:MAGIC}",  ChatColor.MAGIC.toString())
-                .replace("{COLOR:RED}",  ChatColor.RESET.toString())
+                .replace("{COLOR:RED}",  ChatColor.RED.toString())
                 .replace("{COLOR:STRIKETHROUGH}",  ChatColor.STRIKETHROUGH.toString())
                 .replace("{COLOR:UNDERLINE}",  ChatColor.UNDERLINE.toString())
                 .replace("{COLOR:WHITE}",  ChatColor.WHITE.toString())
