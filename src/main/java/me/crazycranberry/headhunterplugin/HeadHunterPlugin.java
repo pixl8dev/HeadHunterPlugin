@@ -112,8 +112,57 @@ public final class HeadHunterPlugin extends JavaPlugin implements Listener {
     @EventHandler
     public void onEntityDeathEvent(EntityDeathEvent event) {
         LivingEntity entity = event.getEntity();
-        if (entity.getKiller() != null) {
-            Player killer = entity.getKiller();
+        Player killer = entity.getKiller();
+        if (killer == null) {
+            return;
+        }
+
+        if (entity instanceof Player) {
+            // Handle player death
+            Player victim = (Player) entity;
+            String playerHeadName = "PLAYER_" + victim.getUniqueId();
+            String displayName = victim.getName() + "'s Head";
+            double dropRate = getDropRate("player", killer);
+            
+            // Log the drop if logging is enabled
+            double roll = Math.random();
+            boolean shouldDrop = roll < dropRate;
+            
+            if (headHunterConfig().shouldLogRolls()) {
+                logger.info(String.format("Player head roll: killer=%s victim=%s dropRate=%.4f (%.2f%%) roll=%.4f -> %s",
+                        killer.getName(), victim.getName(), dropRate, dropRate * 100, roll, 
+                        shouldDrop ? "DROP" : "NO DROP"));
+            }
+
+            if (shouldDrop) {
+                // Drop the player head
+                entity.getWorld().dropItem(entity.getLocation(), makePlayerHead(victim, killer));
+
+                // Broadcast the head drop if enabled
+                if (headHunterConfig().shouldBroadcastHeadDrops()) {
+                    String broadcastMessage = headHunterConfig().head_drop_message(
+                        killer.getName(), 
+                        ChatColor.YELLOW + victim.getName() + "'s Head" + ChatColor.RESET
+                    );
+                    String permission = headHunterConfig().getBroadcastPermission();
+
+                    if (permission == null || permission.isEmpty()) {
+                        // Broadcast to everyone if no permission is set
+                        getServer().broadcastMessage(broadcastMessage);
+                    } else {
+                        // Only broadcast to players with the required permission
+                        for (Player player : getServer().getOnlinePlayers()) {
+                            if (player.hasPermission(permission)) {
+                                player.sendMessage(broadcastMessage);
+                            }
+                        }
+                        // Also send to console
+                        logger.info(ChatColor.stripColor(broadcastMessage));
+                    }
+                }
+            }
+        } else {
+            // Handle mob death (original code)
             String name = getTrueVictimName(event);
             String mobName = translateMob(name);
             double dropRate = getDropRate(name, killer);
@@ -123,7 +172,7 @@ public final class HeadHunterPlugin extends JavaPlugin implements Listener {
             boolean shouldDrop = roll < dropRate;
             
             if (headHunterConfig().shouldLogRolls()) {
-                logger.info(String.format("Head roll: player=%s mob=%s dropRate=%.4f (%.2f%%) roll=%.4f -> %s",
+                logger.info(String.format("Mob head roll: player=%s mob=%s dropRate=%.4f (%.2f%%) roll=%.4f -> %s",
                         killer.getName(), mobName, dropRate, dropRate * 100, roll, 
                         shouldDrop ? "DROP" : "NO DROP"));
             }
@@ -404,20 +453,68 @@ public final class HeadHunterPlugin extends JavaPlugin implements Listener {
         }
     }
 
+    /**
+     * Creates a player head with the victim's skin and appropriate metadata
+     * @param victim The player whose head will be created
+     * @param killer The player who killed the victim
+     * @return An ItemStack representing the player's head
+     */
+    public ItemStack makePlayerHead(Player victim, Player killer) {
+        ItemStack head = new ItemStack(Material.PLAYER_HEAD);
+        SkullMeta meta = (SkullMeta) head.getItemMeta();
+        
+        if (meta == null) {
+            return head;
+        }
+        
+        // Set the owner of the head to the victim
+        meta.setOwningPlayer(victim);
+        
+        // Set the display name to the victim's name + 's Head
+        String displayName = ChatColor.YELLOW + victim.getName() + "'s Head";
+        meta.setDisplayName(displayName);
+        
+        // Add lore with killer information if enabled
+        if (!headHunterConfig().shouldFixClaimPlugins()) {
+            List<String> lore = new ArrayList<>();
+            String ownerInfo = headHunterConfig().head_owner_statement(killer.getName(), "");
+            String secondaryInfo = headHunterConfig().head_secondary_statement();
+            
+            // Store the victim's name in the persistent data container
+            meta.getPersistentDataContainer().set(NAME_KEY, PersistentDataType.STRING, displayName);
+            meta.getPersistentDataContainer().set(LORE_KEY_1, PersistentDataType.STRING, ownerInfo);
+            meta.getPersistentDataContainer().set(LORE_KEY_2, PersistentDataType.STRING, secondaryInfo);
+            
+            // Add a single line of lore that shows it's a player head
+            lore.add(ChatColor.GRAY + "Player Head: " + victim.getName());
+            meta.setLore(lore);
+        }
+        
+        head.setItemMeta(meta);
+        return head;
+    }
+    
+    /**
+     * Creates a mob head with the specified mob type and killer information
+     * @param headName The name of the mob head to create
+     * @param killer The player who killed the mob
+     * @return An ItemStack representing the mob's head
+     */
     public ItemStack makeSkull(String headName, Player killer) {
         ItemStack item = new ItemStack(Material.PLAYER_HEAD);
         SkullMeta meta = (SkullMeta) item.getItemMeta();
-        MobHeads mobHead = MobHeads.valueOf(headName.replace(".", "_"));
-        String textureCode = mobHead.getTexture();
-        // fix invalid textures
-        if (textureCode == null || textureCode.isBlank()) {
-            return item;
-        }
-        
-        // Create a consistent UUID based on the mob type to ensure stackability
-        UUID consistentUuid = UUID.nameUUIDFromBytes(("HeadHunter_" + mobHead.name()).getBytes(StandardCharsets.UTF_8));
         
         try {
+            MobHeads mobHead = MobHeads.valueOf(headName.replace(".", "_"));
+            String textureCode = mobHead.getTexture();
+            // fix invalid textures
+            if (textureCode == null || textureCode.isBlank()) {
+                return item;
+            }
+            
+            // Create a consistent UUID based on the mob type to ensure stackability
+            UUID consistentUuid = UUID.nameUUIDFromBytes(("HeadHunter_" + mobHead.name()).getBytes(StandardCharsets.UTF_8));
+            
             // Create a profile with a consistent UUID based on the mob type
             PlayerProfile profile = Bukkit.createPlayerProfile(consistentUuid, "HeadHunter");
             PlayerTextures textures = profile.getTextures();
@@ -435,36 +532,36 @@ public final class HeadHunterPlugin extends JavaPlugin implements Listener {
                 getLogger().warning("Failed to set owner profile: ItemMeta is null");
                 return item;
             }
+            
+            // Translate using the enum key (e.g., "cow_temperate") to support nested translation keys
+            // Use a consistent display name without the killer's name for stackability
+            String displayName = translateMob(mobHead.name().toLowerCase());
+            meta.setDisplayName(displayName);
+            
+            if (!headHunterConfig().shouldFixClaimPlugins()) {
+                // Use a simplified lore that's consistent for each mob type to ensure stackability
+                List<String> lore = new ArrayList<>();
+                // Store the killer's name in a separate line that won't prevent stacking
+                String ownerInfo = headHunterConfig().head_owner_statement(killer.getName(), "");
+                String secondaryInfo = headHunterConfig().head_secondary_statement();
+                
+                // Store the actual mob name in the persistent data container
+                meta.getPersistentDataContainer().set(NAME_KEY, PersistentDataType.STRING, displayName);
+                meta.getPersistentDataContainer().set(LORE_KEY_1, PersistentDataType.STRING, ownerInfo);
+                meta.getPersistentDataContainer().set(LORE_KEY_2, PersistentDataType.STRING, secondaryInfo);
+                
+                // Add a single line of lore that shows it's a mob head
+                lore.add(ChatColor.GRAY + "Mob Head: " + displayName);
+                meta.setLore(lore);
+            }
+            
+            // Set the item meta and amount to 1 (this ensures consistent stacking)
+            item.setItemMeta(meta);
+            item.setAmount(1);
         } catch (Exception e) {
-            getLogger().warning("Failed to create player profile for head: " + e.getMessage());
-            return item;
+            getLogger().warning("Failed to create mob head: " + e.getMessage());
         }
         
-        // Translate using the enum key (e.g., "cow_temperate") to support nested translation keys
-        // Use a consistent display name without the killer's name for stackability
-        String displayName = translateMob(mobHead.name().toLowerCase());
-        meta.setDisplayName(displayName);
-        
-        if (!headHunterConfig().shouldFixClaimPlugins()) {
-            // Use a simplified lore that's consistent for each mob type to ensure stackability
-            List<String> lore = new ArrayList<>();
-            // Store the killer's name in a separate line that won't prevent stacking
-            String ownerInfo = headHunterConfig().head_owner_statement(killer.getName(), "");
-            String secondaryInfo = headHunterConfig().head_secondary_statement();
-            
-            // Store the actual mob name in the persistent data container
-            meta.getPersistentDataContainer().set(NAME_KEY, PersistentDataType.STRING, displayName);
-            meta.getPersistentDataContainer().set(LORE_KEY_1, PersistentDataType.STRING, ownerInfo);
-            meta.getPersistentDataContainer().set(LORE_KEY_2, PersistentDataType.STRING, secondaryInfo);
-            
-            // Add a single line of lore that shows it's a mob head
-            lore.add(ChatColor.GRAY + "Mob Head: " + displayName);
-            meta.setLore(lore);
-        }
-        
-        // Set the item meta and amount to 1 (this ensures consistent stacking)
-        item.setItemMeta(meta);
-        item.setAmount(1);
         return item;
     }
 

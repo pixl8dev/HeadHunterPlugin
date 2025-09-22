@@ -1,6 +1,7 @@
 # Following are chance percent settings for each mob and variants of mobs.
 # 0.001 = 1/10 of 1 percent, 0.01 = 1 percent, 1.00 = 100 percent
 chance_percent:
+  player: 0.50
   allay: 0.02
   armadillo: 0.01
   axolotl:
